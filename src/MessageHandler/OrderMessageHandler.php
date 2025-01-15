@@ -26,7 +26,6 @@ final class OrderMessageHandler
             throw new \Exception('Order not found');
         }
 
-        // Przetwarzanie zamówienia...
         $order->setStatus('processed');
         $this->entityManager->flush();
     }

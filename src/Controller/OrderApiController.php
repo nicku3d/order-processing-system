@@ -5,6 +5,8 @@ namespace App\Controller;
 use App\Entity\Order;
 use App\Message\OrderMessage;
 use Doctrine\ORM\EntityManagerInterface;
+use Pagerfanta\Doctrine\ORM\QueryAdapter;
+use Pagerfanta\Pagerfanta;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -29,29 +31,24 @@ final class OrderApiController extends AbstractController
     {
         $data = json_decode($request->getContent(), true);
 
-        // data validation
         if (!$data || !isset($data['customerName'], $data['email'], $data['products'], $data['address'])) {
             return new JsonResponse(['error' => 'Invalid input data'], 400);
         }
 
-        // Order creation
         $order = new Order();
         $order->setCustomerName($data['customerName']);
         $order->setEmail($data['email']);
         $order->setProducts($data['products']);
         $order->setAddress($data['address']);
 
-        // validate entity
         $errors = $validator->validate($order);
         if (count($errors) > 0) {
             return new JsonResponse(['error' => (string) $errors], 400);
         }
 
-        // Save to database
         $this->entityManager->persist($order);
         $this->entityManager->flush();
 
-        // Send message to RabbitMQ
         $this->bus->dispatch(new OrderMessage($order->getId()));
 
         return new JsonResponse(['message' => 'Order created successfully', 'orderId' => $order->getId()], 201);
@@ -74,15 +71,23 @@ final class OrderApiController extends AbstractController
             'address' => $order->getAddress(),
             'status' => $order->getStatus(),
             'createdAt' => $order->getCreatedAt()->format('Y-m-d H:i:s'),
+            'updatedAt' => $order->getUpdatedAt()->format('Y-m-d H:i:s'),
         ]);
     }
 
     #[Route('/api/orders', name: 'get_orders', methods: ['GET'])]
-    public function getOrders(): JsonResponse
+    public function getOrders(Request $request): JsonResponse
     {
-        $orders = $this->entityManager->getRepository(Order::class)->findAll();
+        $page = max(1, (int) $request->query->get('page', 1));
+        $limit = max(1, (int) $request->query->get('limit', 10));
 
-        $data = array_map(function (Order $order) {
+        $queryBuilder = $this->entityManager->getRepository(Order::class)->createQueryBuilder('o');
+        $adapter = new QueryAdapter($queryBuilder);
+        $pager = new Pagerfanta($adapter);
+        $pager->setMaxPerPage($limit);
+        $pager->setCurrentPage($page);
+
+        $orders = array_map(function (Order $order) {
             return [
                 'id' => $order->getId(),
                 'customerName' => $order->getCustomerName(),
@@ -92,9 +97,35 @@ final class OrderApiController extends AbstractController
                 'status' => $order->getStatus(),
                 'createdAt' => $order->getCreatedAt()->format('Y-m-d H:i:s'),
             ];
-        }, $orders);
+        }, iterator_to_array($pager->getCurrentPageResults()));
 
-        return new JsonResponse($data);
+        return new JsonResponse([
+            'data' => $orders,
+            'meta' => [
+                'currentPage' => $pager->getCurrentPage(),
+                'totalPages' => $pager->getNbPages(),
+                'totalItems' => $pager->getNbResults(),
+                'itemsPerPage' => $pager->getMaxPerPage(),
+            ],
+        ]);
     }
+//    public function getOrders(): JsonResponse
+//    {
+//        $orders = $this->entityManager->getRepository(Order::class)->findAll();
+//
+//        $data = array_map(function (Order $order) {
+//            return [
+//                'id' => $order->getId(),
+//                'customerName' => $order->getCustomerName(),
+//                'email' => $order->getEmail(),
+//                'products' => $order->getProducts(),
+//                'address' => $order->getAddress(),
+//                'status' => $order->getStatus(),
+//                'createdAt' => $order->getCreatedAt()->format('Y-m-d H:i:s'),
+//            ];
+//        }, $orders);
+//
+//        return new JsonResponse($data);
+//    }
 
 }
