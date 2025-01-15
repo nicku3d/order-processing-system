@@ -1,4 +1,18 @@
-# Symfony Docker
+# Order processing system
+
+Example of order processing system using RabbitMQ.
+
+Project created with https://github.com/dunglas/symfony-docker template.
+
+### Commands
+
+Run queue worker for 1 minute inside of php container:
+
+```
+php bin/console messenger:consume amqp --time-limit=60 --memory-limit=128M
+```
+
+## Symfony Docker
 
 A [Docker](https://www.docker.com/)-based installer and runtime for the [Symfony](https://symfony.com) web framework,
 with [FrankenPHP](https://frankenphp.dev) and [Caddy](https://caddyserver.com/) inside!

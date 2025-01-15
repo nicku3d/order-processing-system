@@ -109,23 +109,5 @@ final class OrderApiController extends AbstractController
             ],
         ]);
     }
-//    public function getOrders(): JsonResponse
-//    {
-//        $orders = $this->entityManager->getRepository(Order::class)->findAll();
-//
-//        $data = array_map(function (Order $order) {
-//            return [
-//                'id' => $order->getId(),
-//                'customerName' => $order->getCustomerName(),
-//                'email' => $order->getEmail(),
-//                'products' => $order->getProducts(),
-//                'address' => $order->getAddress(),
-//                'status' => $order->getStatus(),
-//                'createdAt' => $order->getCreatedAt()->format('Y-m-d H:i:s'),
-//            ];
-//        }, $orders);
-//
-//        return new JsonResponse($data);
-//    }
 
 }

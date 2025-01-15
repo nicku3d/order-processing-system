@@ -4,6 +4,12 @@ framework:
         # failure_transport: failed
 
         transports:
+            amqp:
+                dsn: "%env(MESSENGER_TRANSPORT_DSN)%"
+                options:
+                    queues:
+                        orders_queue: []
+                serializer: 'messenger.transport.symfony_serializer'
             # https://symfony.com/doc/current/messenger.html#transport-configuration
             # async: '%env(MESSENGER_TRANSPORT_DSN)%'
             # failed: 'doctrine://default?queue_name=failed'
@@ -11,7 +17,7 @@ framework:
 
         routing:
             # Route your messages to the transports
-            # 'App\Message\YourMessage': async
+            'App\Message\OrderMessage': amqp
 
 # when@test:
 #    framework:
